@@ -2,15 +2,18 @@ import { createTheme } from "@mui/material";
 
 const themeOptions = {
   palette: {
-    type: 'light',
+    type: "light",
     primary: {
-      main: '#32b08b',
+      main: "#32b08b",
     },
     secondary: {
-      main: '#79ce66',
+      main: "#79ce66",
     },
     info: {
-      main: '#FFC872',
+      main: "#FFC872",
+    },
+    text: {
+      info: "#FFC872",
     },
   },
 };

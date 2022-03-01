@@ -1,23 +1,62 @@
 import {
   Button,
   Checkbox,
-  CircularProgress,
   Container,
   FormControlLabel,
+  Grid,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
+import { useSnackbar } from "../contexts/SnackbarContext";
+
 import Layout from "../components/Layout";
-import useAgents from "../hooks/useAgents";
 import AgentCard from "../components/AgentCard";
 import { Box } from "@mui/system";
 import { PlusOne } from "@mui/icons-material";
+import CreateAgentDialog from "../components/dialogs/CreateAgentDialog";
+import Loading from "../components/Loading";
+import { useAgents } from "../contexts/AgentsContext";
+const newAgentBaseModel = {
+  sex: "",
+  name: "",
+};
 const Agents = () => {
-  const { loading, data, error, fetch } = useAgents();
+  const { loading, data, upsertAgent, error } = useAgents();
   const [showInactive, setShowInactive] = useState(false);
+  const { errorSnackbar, successSnackbar } = useSnackbar();
+  const [createAgentDialogOpen, setCreateAgentDialogOpen] = useState(false);
+  const [agentUpdateModel, setAgentUpdateModel] = useState({
+    ...newAgentBaseModel,
+  });
+
   useEffect(() => {
-    fetch(showInactive);
-  }, [showInactive]);
+    if (error) {
+      errorSnackbar(error);
+    }
+  }, [error]);
+
+  const handleAddNewAgent = () => {
+    setAgentUpdateModel({ ...newAgentBaseModel });
+    setCreateAgentDialogOpen(true);
+  };
+
+  const handleEditAgent = (agent) => {
+    setAgentUpdateModel(agent);
+    setCreateAgentDialogOpen(true);
+  };
+
+  const handleDeleteAgent = async (agent) => {
+    await handleAgentUpsert({ id: agent.id, deleted: true });
+  };
+
+  const handleAgentUpsert = async (agent) => {
+    const operation = await upsertAgent(agent);
+    successSnackbar(
+      "Your agent was {action} successfully!".replace("{action}", operation)
+    );
+    setCreateAgentDialogOpen(false);
+    setAgentUpdateModel({ ...newAgentBaseModel });
+  };
 
   const handleActiveFilter = (event) => {
     setShowInactive(event.target.checked);
@@ -25,6 +64,14 @@ const Agents = () => {
 
   return (
     <Layout>
+      <CreateAgentDialog
+        updateModel={agentUpdateModel}
+        open={createAgentDialogOpen}
+        onClose={() => {
+          setCreateAgentDialogOpen(false);
+        }}
+        onAgentUpsert={handleAgentUpsert}
+      />
       <Container
         sx={{
           my: 4,
@@ -54,6 +101,7 @@ const Agents = () => {
           </Box>
           <Box display="flex" alignItems="flex-end">
             <Button
+              onClick={handleAddNewAgent}
               sx={{
                 color: "white",
                 my: 2,
@@ -73,18 +121,26 @@ const Agents = () => {
             justifyContent: "space-between",
           }}
         >
-          {error && <h1>{error}</h1>}
-          {loading && (
-            <CircularProgress
-              sx={{
-                zIndex: 100,
-                width: "100%",
-              }}
-              size={60}
-              color="secondary"
-            />
+          <Loading open={loading} />
+          {data && (
+            <Grid container spacing={2}>
+              {data
+                ?.filter((x) => (showInactive ? true : !x.deleted))
+                .map((x) => (
+                  <Grid key={x.id} item xs={4}>
+                    <AgentCard
+                      onEditAgent={() => handleEditAgent(x)}
+                      onDeleteAgent={() => handleDeleteAgent(x)}
+                      agent={x}
+                      key={x.id}
+                    />
+                  </Grid>
+                ))}
+              {!loading && !error && !data?.length && (
+                <>Create your first agent!</>
+              )}
+            </Grid>
           )}
-          {data && data?.map((x) => <AgentCard agent={x} key={x.id} />)}
         </Box>
       </Container>
     </Layout>

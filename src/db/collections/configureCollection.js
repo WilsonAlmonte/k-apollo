@@ -1,10 +1,23 @@
-import { collection, getDoc, getDocs, query, where } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  getDoc,
+  getDocs,
+  updateDoc,
+  query,
+  where,
+  doc,
+} from "firebase/firestore";
 import db from "../index";
 
 const docMap = (doc) => ({ ...doc.data(), id: doc.id });
-export const configureCollection = (collectionName, errorMessages = {}) => {
+export const configureCollection = (
+  collectionName,
+  errorMessages = {},
+  getExtraMethods
+) => {
   const genericErrorMessage =
-    "An error has ocurred while getting your document";
+    "An error has ocurred while performing the action";
   const collectionRef = collection(db, collectionName);
   const getAll = async () => {
     try {
@@ -14,6 +27,25 @@ export const configureCollection = (collectionName, errorMessages = {}) => {
     } catch (err) {
       console.error(err);
       throw new Error(errorMessages["getAll"] || genericErrorMessage);
+    }
+  };
+
+  const create = async (newDoc) => {
+    try {
+      await addDoc(collectionRef, { ...newDoc, deleted: false });
+    } catch (err) {
+      console.error(err);
+      throw new Error(errorMessages["create"] || genericErrorMessage);
+    }
+  };
+
+  const update = async ({ id, ...rest }) => {
+    try {
+      const docRef = doc(db, collectionName, id);
+      await updateDoc(docRef, { ...rest });
+    } catch (err) {
+      console.error(err);
+      throw new Error(errorMessages["update"] || genericErrorMessage);
     }
   };
 
@@ -30,7 +62,6 @@ export const configureCollection = (collectionName, errorMessages = {}) => {
 
   const getFilteredHOF = async (...filter) => {
     try {
-      console.log(filter)
       const q = query(collectionRef, where(...filter));
       const { docs } = await getDocs(q);
       const result = docs.map(docMap);
@@ -40,5 +71,12 @@ export const configureCollection = (collectionName, errorMessages = {}) => {
       throw new Error(errorMessages["getFiltered"] || genericErrorMessage);
     }
   };
-  return { collectionRef, getAll, getById, getFilteredHOF };
+
+  let externalMethods = {};
+
+  if (getExtraMethods) {
+    externalMethods = getExtraMethods({ collectionRef, db, collectionName, docMap });
+  }
+
+  return { collectionRef, getAll, getById, getFilteredHOF, create, update, ...externalMethods };
 };
