@@ -25,6 +25,7 @@ const Layout = ({ children }) => {
             <Box>
               <LinkButton path="/">Home</LinkButton>
               <LinkButton path="/agents">Agents</LinkButton>
+              <LinkButton path="/excel">Excel Converter</LinkButton>
             </Box>
           </Toolbar>
         </Container>
